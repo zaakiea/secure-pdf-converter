@@ -1,0 +1,13 @@
+# Dependency (Wajib di-ignore karena ukurannya besar)
+node_modules/
+
+# Environment variables (Untuk keamanan)
+.env
+
+# Folder sementara (Jangan di-upload karena isinya file sampah user)
+uploads/
+output/
+
+# System files (File sampah OS)
+.DS_Store
+Thumbs.db

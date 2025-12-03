@@ -1,5 +1,6 @@
 // src/controllers/MainController.js
 const OcrConverter = require("../modules/converters/OcrConverter");
+const DocxConverter = require("../modules/converters/DocxConverter");
 const MergeManipulator = require("../modules/manipulators/MergeManipulator");
 const SplitManipulator = require("../modules/manipulators/SplitManipulator");
 const SecurityHandler = require("../core/SecurityHandler");
@@ -21,6 +22,10 @@ class MainController {
       switch (operation) {
         case "ocr":
           processor = new OcrConverter();
+          inputData = files[0].path;
+          break;
+        case "docx":
+          processor = new DocxConverter();
           inputData = files[0].path;
           break;
         case "merge":

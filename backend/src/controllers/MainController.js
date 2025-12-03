@@ -1,6 +1,8 @@
 // src/controllers/MainController.js
 const OcrConverter = require("../modules/converters/OcrConverter");
 const DocxConverter = require("../modules/converters/DocxConverter");
+const XlsxConverter = require("../modules/converters/XlsxConverter");
+const ImageConverter = require("../modules/converters/ImageConverter");
 const MergeManipulator = require("../modules/manipulators/MergeManipulator");
 const SplitManipulator = require("../modules/manipulators/SplitManipulator");
 const SecurityHandler = require("../core/SecurityHandler");
@@ -12,13 +14,13 @@ class MainController {
       const { operation, password } = req.body;
       const files = req.files || [req.file];
 
-      if (!files) throw new Error("No files uploaded.");
+      if (!files || files.length === 0) throw new Error("No files uploaded.");
 
       let processor;
       let inputData;
       const outputPath = path.join("output", `result-${Date.now()}.pdf`);
 
-      // Factory Pattern: Menentukan Processor
+      // Factory Pattern Lengkap
       switch (operation) {
         case "ocr":
           processor = new OcrConverter();
@@ -26,6 +28,14 @@ class MainController {
           break;
         case "docx":
           processor = new DocxConverter();
+          inputData = files[0].path;
+          break;
+        case "xlsx": // <--- Tambahan Excel
+          processor = new XlsxConverter();
+          inputData = files[0].path;
+          break;
+        case "image": // <--- Tambahan Image Biasa
+          processor = new ImageConverter();
           inputData = files[0].path;
           break;
         case "merge":
@@ -37,13 +47,11 @@ class MainController {
           inputData = files[0].path;
           break;
         default:
-          throw new Error("Invalid operation");
+          throw new Error("Invalid operation: " + operation);
       }
 
-      // Polymorphism: Panggil .process() tanpa peduli tipe objeknya
       await processor.process(inputData, outputPath);
 
-      // Security Injection
       if (password) {
         const security = new SecurityHandler(password);
         await security.applySecurity(outputPath);
@@ -51,9 +59,8 @@ class MainController {
 
       res.download(outputPath);
     } catch (error) {
-      // Exception Handling
       console.error(error);
-      res.status(500).json({ error: error.message });
+      if (!res.headersSent) res.status(500).json({ error: error.message });
     }
   }
 }

@@ -1,35 +1,39 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, { useEffect } from 'react';
+
+// 1. Import CSS
+// Pastikan Anda sudah menyalin semua CSS ke dalam file src/App.css
+import './App.css';
+import '@fortawesome/fontawesome-free/css/all.min.css';
+
+// 2. Import Komponen dari folder masing-masing
+import Header from './components/Layout/Header';
+import Footer from './components/Layout/Footer';
+import FeaturesGrid from './components/Dashboard/FeaturesGrid';
+import SystemInfo from './components/Dashboard/SystemInfo';
+// Pastikan nama file Anda MainCard.jsx, jika MainConverter.jsx sesuaikan import ini
+import MainCard from './components/Converter/MainCard'; 
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div className="app-container">
+      {/* Header dari components/Layout/Header.jsx */}
+      <Header />
+      
+      <main className="container">
+        {/* FeaturesGrid dari components/Dashboard/FeaturesGrid.jsx */}
+        <FeaturesGrid />
+        
+        {/* MainCard adalah komponen utama konverter */}
+        <MainCard />
+        
+        {/* SystemInfo dari components/Dashboard/SystemInfo.jsx */}
+        <SystemInfo />
+      </main>
+      
+      {/* Footer dari components/Layout/Footer.jsx */}
+      <Footer />
+    </div>
+  );
 }
 
-export default App
+export default App;

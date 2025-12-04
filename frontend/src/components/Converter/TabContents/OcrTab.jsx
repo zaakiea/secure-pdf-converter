@@ -1,37 +1,31 @@
-import React from 'react';
+import React from "react";
 
 const OcrTab = ({ options, setOption }) => {
   return (
-    <div className="tab-content active">
-      <h3 className="mb-2">Optical Character Recognition (OCR)</h3>
-      <p>Ekstrak teks dari gambar atau PDF pindaian menjadi PDF yang dapat dicari.</p>
-      
-      <div className="security-options mt-2">
-        <h4><i className="fas fa-sliders-h"></i> Pengaturan OCR</h4>
-        <div className="form-group">
-          <label>Bahasa Teks</label>
-          <select 
-            className="form-control"
-            value={options.ocrLanguage}
-            onChange={(e) => setOption('ocrLanguage', e.target.value)}
-          >
-            <option value="id">Bahasa Indonesia</option>
-            <option value="en">English</option>
-            <option value="multi">Multi-language</option>
-          </select>
-        </div>
-        <div className="form-group">
-          <label>Akurasi OCR</label>
-          <select 
-            className="form-control"
-            value={options.ocrAccuracy}
-            onChange={(e) => setOption('ocrAccuracy', e.target.value)}
-          >
-            <option value="high">Tinggi (Lebih Lambat)</option>
-            <option value="medium">Sedang (Rekomendasi)</option>
-            <option value="fast">Cepat</option>
-          </select>
-        </div>
+    <div className="tab-content active bg-white p-3 border rounded">
+      <h4>
+        <i className="fas fa-eye"></i> Optical Character Recognition (OCR)
+      </h4>
+      <p className="text-muted small">
+        Ekstrak teks dari gambar agar bisa dicopy-paste.
+      </p>
+
+      <div className="mb-2">
+        <label className="form-label">Bahasa Dokumen:</label>
+        <select
+          className="form-select"
+          value={options.ocrLanguage}
+          onChange={(e) => setOption("ocrLanguage", e.target.value)}
+        >
+          <option value="eng">Inggris (English)</option>
+          {/* Tambahkan opsi lain jika backend sudah support */}
+        </select>
+      </div>
+      <div className="alert alert-info py-2">
+        <small>
+          <i className="fas fa-info-circle"></i> Proses OCR mungkin memakan
+          waktu lebih lama tergantung kualitas gambar.
+        </small>
       </div>
     </div>
   );

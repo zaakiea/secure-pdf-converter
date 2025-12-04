@@ -1,41 +1,31 @@
-import React, { useRef } from 'react';
+import React from "react";
 
 const UploadArea = ({ onUpload }) => {
-  const fileInputRef = useRef(null);
-
-  const handleFiles = (e) => {
-    const files = Array.from(e.target.files || e.dataTransfer.files);
-    // Filter file types if needed
-    onUpload(files);
+  const handleChange = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      onUpload(Array.from(e.target.files));
+    }
   };
 
   return (
-    <div 
-      className="upload-area"
-      onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#2980b9'; }}
-      onDragLeave={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#3498db'; }}
-      onDrop={(e) => { 
-        e.preventDefault(); 
-        e.currentTarget.style.borderColor = '#3498db'; 
-        handleFiles(e); 
-      }}
-      onClick={() => fileInputRef.current.click()}
-    >
-      <div className="upload-icon">
-        <i className="fas fa-cloud-upload-alt"></i>
-      </div>
-      <h3>Unggah File Anda</h3>
-      <p>Drag & drop file atau klik untuk memilih</p>
-      <p style={{ fontSize: '0.9rem', color: '#666' }}>
-        Format yang didukung: PDF, DOCX, XLSX, JPG, PNG
-      </p>
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        className="hidden" 
-        multiple 
-        onChange={handleFiles} 
+    <div className="upload-area mb-3">
+      <input
+        type="file"
+        multiple
+        id="fileInput"
+        className="hidden-input"
+        onChange={handleChange}
+        style={{ display: "none" }}
       />
+      <label htmlFor="fileInput" className="upload-label">
+        <div className="icon">
+          <i className="fas fa-cloud-upload-alt fa-3x"></i>
+        </div>
+        <p>
+          Klik untuk memilih file atau <strong>Drag & Drop</strong> di sini
+        </p>
+        <span className="info">Mendukung: DOCX, XLSX, JPG, PNG, PDF</span>
+      </label>
     </div>
   );
 };

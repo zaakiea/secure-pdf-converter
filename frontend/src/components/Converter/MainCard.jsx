@@ -15,7 +15,7 @@ const MainCard = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  // Global State untuk Opsi (dikirim ke TabContents)
+  // Global State untuk Opsi
   const [options, setOptions] = useState({
     format: "", // convert
     ocrLanguage: "id", // ocr
@@ -50,7 +50,7 @@ const MainCard = () => {
       return alert("Masukkan range halaman (cth: 1-3)!");
 
     setIsProcessing(true);
-    setProgress(10); // Mulai progress
+    setProgress(10);
 
     const formData = new FormData();
 
@@ -59,24 +59,22 @@ const MainCard = () => {
       formData.append("files", file);
     });
 
-    // 2. Tentukan Operasi (Mapping UI ke Backend logic)
+    // 2. Tentukan Operasi
     let operation = activeTab;
-    if (activeTab === "convert") operation = options.format; // docx, xlsx, image
+    if (activeTab === "convert") operation = options.format;
 
     formData.append("operation", operation);
 
     // 3. Masukkan Opsi Tambahan
-    if (options.usePassword) formData.append("password", options.options);
+    if (options.usePassword) formData.append("password", options.password);
     if (activeTab === "split") formData.append("range", options.pageRange);
-    if (activeTab === "ocr") formData.append("ocr", "true"); // Penanda khusus OCR
+    if (activeTab === "ocr") formData.append("ocr", "true");
 
     try {
-      // Panggil API (Real Backend)
       const blob = await processFile(formData, (percent) => {
         setProgress(percent);
       });
 
-      // Download Otomatis
       const url = window.URL.createObjectURL(new Blob([blob]));
       const link = document.createElement("a");
       link.href = url;
@@ -95,6 +93,10 @@ const MainCard = () => {
     }
   };
 
+  // LOGIKA BARU: Cek apakah upload harus dimatikan?
+  // Upload mati jika Tab = Convert DAN Format belum dipilih
+  const isUploadDisabled = activeTab === "convert" && !options.format;
+
   return (
     <div className="main-card">
       <div className="card-header">
@@ -105,7 +107,7 @@ const MainCard = () => {
       </div>
 
       <div className="card-body">
-        {/* Tabs Navigation */}
+        {/* 1. Tabs Navigation */}
         <div className="tabs">
           {[
             { id: "convert", label: "Konversi", icon: "fa-exchange-alt" },
@@ -123,12 +125,9 @@ const MainCard = () => {
           ))}
         </div>
 
-        {/* Upload & File List */}
-        <UploadArea onUpload={handleFileUpload} />
-        <FileList files={files} onRemove={handleRemoveFile} />
-
-        {/* Tab Contents (Conditional Rendering) */}
-        <div className="tab-content-container mb-2">
+        {/* 2. Tab Contents (DIPINDAH KE ATAS) */}
+        {/* Agar user memilih format dulu sebelum melihat tombol upload */}
+        <div className="tab-content-container mb-3">
           {activeTab === "convert" && (
             <ConvertTab
               selectedFormat={options.format}
@@ -144,6 +143,11 @@ const MainCard = () => {
           )}
         </div>
 
+        {/* 3. Upload Area (DIBERIKAN PROP DISABLED) */}
+        <UploadArea onUpload={handleFileUpload} disabled={isUploadDisabled} />
+
+        <FileList files={files} onRemove={handleRemoveFile} />
+
         <SecurityPanel options={options} setOption={handleOptionChange} />
 
         {isProcessing && (
@@ -158,7 +162,7 @@ const MainCard = () => {
           <button
             className="btn btn-primary"
             onClick={handleProcess}
-            disabled={isProcessing}
+            disabled={isProcessing || isUploadDisabled}
           >
             {isProcessing ? (
               "Memproses..."

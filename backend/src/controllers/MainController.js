@@ -1,4 +1,3 @@
-// src/controllers/MainController.js
 const OcrConverter = require("../modules/converters/OcrConverter");
 const DocxConverter = require("../modules/converters/DocxConverter");
 const XlsxConverter = require("../modules/converters/XlsxConverter");
@@ -7,20 +6,26 @@ const MergeManipulator = require("../modules/manipulators/MergeManipulator");
 const SplitManipulator = require("../modules/manipulators/SplitManipulator");
 const SecurityHandler = require("../core/SecurityHandler");
 const path = require("path");
+const fs = require("fs");
 
 class MainController {
   static async handleRequest(req, res) {
+    let inputData; // Deklarasi di luar try agar bisa diakses di finally/cleanup
+    let outputPath;
+
     try {
       const { operation, password } = req.body;
-      const files = req.files || [req.file];
+      // Ambil opsi tambahan (seperti range halaman untuk split)
+      const options = req.body;
 
-      if (!files || files.length === 0) throw new Error("No files uploaded.");
+      const files = req.files || (req.file ? [req.file] : []);
+
+      if (files.length === 0) throw new Error("No files uploaded.");
 
       let processor;
-      let inputData;
-      const outputPath = path.join("output", `result-${Date.now()}.pdf`);
+      outputPath = path.join("output", `result-${Date.now()}.pdf`);
 
-      // Factory Pattern Lengkap
+      // Factory Pattern
       switch (operation) {
         case "ocr":
           processor = new OcrConverter();
@@ -30,16 +35,17 @@ class MainController {
           processor = new DocxConverter();
           inputData = files[0].path;
           break;
-        case "xlsx": // <--- Tambahan Excel
+        case "xlsx":
           processor = new XlsxConverter();
           inputData = files[0].path;
           break;
-        case "image": // <--- Tambahan Image Biasa
+        case "image":
           processor = new ImageConverter();
           inputData = files[0].path;
           break;
         case "merge":
           processor = new MergeManipulator();
+          // Merge butuh array paths
           inputData = files.map((f) => f.path);
           break;
         case "split":
@@ -50,17 +56,50 @@ class MainController {
           throw new Error("Invalid operation: " + operation);
       }
 
-      await processor.process(inputData, outputPath);
+      // PERBAIKAN 1: Kirim 'options' sebagai parameter ke-3 agar SplitManipulator bisa baca range
+      await processor.process(inputData, outputPath, options);
 
+      // Security Injection
       if (password) {
         const security = new SecurityHandler(password);
         await security.applySecurity(outputPath);
       }
 
-      res.download(outputPath);
+      // Kirim file ke user
+      res.download(outputPath, (err) => {
+        if (err) console.error("Download Error:", err);
+
+        // PERBAIKAN 2: Auto Cleanup (Hapus file sampah)
+        MainController.cleanup(inputData, outputPath);
+      });
     } catch (error) {
       console.error(error);
+      // Cleanup jika error terjadi sebelum download
+      if (inputData || outputPath)
+        MainController.cleanup(inputData, outputPath);
+
       if (!res.headersSent) res.status(500).json({ error: error.message });
+    }
+  }
+
+  // Helper untuk hapus file
+  static cleanup(inputData, outputPath) {
+    try {
+      // Hapus Input (Bisa berupa String path atau Array path)
+      if (Array.isArray(inputData)) {
+        inputData.forEach((p) => {
+          if (fs.existsSync(p)) fs.unlinkSync(p);
+        });
+      } else if (inputData && fs.existsSync(inputData)) {
+        fs.unlinkSync(inputData);
+      }
+
+      // Hapus Output
+      if (outputPath && fs.existsSync(outputPath)) {
+        fs.unlinkSync(outputPath);
+      }
+    } catch (e) {
+      console.error("Cleanup Error:", e.message);
     }
   }
 }

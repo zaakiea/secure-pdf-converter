@@ -6,18 +6,15 @@ const fs = require("fs");
 class DocxConverter extends BaseProcessor {
   async process(inputPath, outputPath) {
     console.log("[DocxConverter] Converting Word document...");
-
-    // 1. Validasi (Inheritance dari Parent)
     super.validate(inputPath);
 
-    // 2. Baca file Word dan ekstrak teks mentahnya (Raw Text)
-    // (Catatan: Konversi format full layout sangat sulit di Node.js murni,
-    // jadi kita ambil teksnya untuk dijadikan PDF sebagai demo PBO)
     const result = await mammoth.extractRawText({ path: inputPath });
-    const text = result.value; // Teks asli dari Word
+    let text = result.value;
 
-    if (!text) {
-      throw new Error("Gagal membaca teks dari file Word.");
+    // PERBAIKAN: Handle jika teks kosong
+    if (!text || text.trim().length === 0) {
+      text =
+        "[PERINGATAN: Dokumen ini tidak mengandung teks yang bisa diekstrak, atau hanya berisi gambar.]";
     }
 
     // 3. Buat PDF baru berisi teks tersebut

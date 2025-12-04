@@ -1,181 +1,36 @@
-import React, { useState } from "react";
-import UploadArea from "./UploadArea";
-import FileList from "./FileList";
-import SecurityPanel from "./SecurityPanel";
-import ConvertTab from "./TabContents/ConvertTab";
-import OcrTab from "./TabContents/OcrTab";
-import MergeTab from "./TabContents/MergeTab";
-import SplitTab from "./TabContents/SplitTab";
-import ProgressBar from "../UI/ProgressBar";
-import { processFile } from "../../services/api";
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import "./App.css";
+import "@fortawesome/fontawesome-free/css/all.min.css";
 
-const MainCard = () => {
-  const [activeTab, setActiveTab] = useState("convert");
-  const [files, setFiles] = useState([]);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [progress, setProgress] = useState(0);
+// Layout
+import Header from "./components/Layout/Header";
+import Footer from "./components/Layout/Footer";
 
-  // Global State untuk Opsi
-  const [options, setOptions] = useState({
-    format: "", // convert
-    ocrLanguage: "id", // ocr
-    ocrAccuracy: "medium", // ocr
-    splitMode: "range", // split
-    pageRange: "", // split
-    usePassword: false, // security
-    password: "", // security
-    autoDelete: true, // security
-  });
+// Pages
+import HomePage from "./pages/HomePage";
+import UploadPage from "./pages/UploadPage";
 
-  const handleFileUpload = (newFiles) => {
-    setFiles((prev) => [...prev, ...newFiles]);
-  };
-
-  const handleRemoveFile = (index) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleOptionChange = (key, value) => {
-    setOptions((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const handleProcess = async () => {
-    if (files.length === 0)
-      return alert("Silakan unggah file terlebih dahulu!");
-
-    // Validasi logic sederhana
-    if (activeTab === "convert" && !options.format)
-      return alert("Pilih format target dulu!");
-    if (activeTab === "split" && !options.pageRange)
-      return alert("Masukkan range halaman (cth: 1-3)!");
-
-    setIsProcessing(true);
-    setProgress(10);
-
-    const formData = new FormData();
-
-    // 1. Masukkan File
-    files.forEach((file) => {
-      formData.append("files", file);
-    });
-
-    // 2. Tentukan Operasi
-    let operation = activeTab;
-    if (activeTab === "convert") operation = options.format;
-
-    formData.append("operation", operation);
-
-    // 3. Masukkan Opsi Tambahan
-    if (options.usePassword) formData.append("password", options.password);
-    if (activeTab === "split") formData.append("range", options.pageRange);
-    if (activeTab === "ocr") formData.append("ocr", "true");
-
-    try {
-      const blob = await processFile(formData, (percent) => {
-        setProgress(percent);
-      });
-
-      const url = window.URL.createObjectURL(new Blob([blob]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `Result_${Date.now()}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-
-      alert("Berhasil! File sedang diunduh.");
-    } catch (error) {
-      console.error(error);
-      alert("Gagal memproses: " + error);
-    } finally {
-      setIsProcessing(false);
-      setProgress(0);
-    }
-  };
-
-  // LOGIKA BARU: Cek apakah upload harus dimatikan?
-  // Upload mati jika Tab = Convert DAN Format belum dipilih
-  const isUploadDisabled = activeTab === "convert" && !options.format;
-
+function App() {
   return (
-    <div className="main-card">
-      <div className="card-header">
-        <h2>
-          <i className="fas fa-cogs"></i> Secure PDF Converter & Editor
-        </h2>
-        <p>Unggah file Anda dan pilih operasi yang diinginkan</p>
+    <Router>
+      <div className="app-container">
+        <Header />
+
+        <main className="container">
+          <Routes>
+            {/* Route Halaman Utama */}
+            <Route path="/" element={<HomePage />} />
+
+            {/* Route Halaman Upload Dinamis (:feature bisa jadi convert, ocr, dll) */}
+            <Route path="/upload/:feature" element={<UploadPage />} />
+          </Routes>
+        </main>
+
+        <Footer />
       </div>
-
-      <div className="card-body">
-        {/* 1. Tabs Navigation */}
-        <div className="tabs">
-          {[
-            { id: "convert", label: "Konversi", icon: "fa-exchange-alt" },
-            { id: "ocr", label: "OCR", icon: "fa-eye" },
-            { id: "merge", label: "Merge", icon: "fa-object-group" },
-            { id: "split", label: "Split", icon: "fa-cut" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              className={`tab-btn ${activeTab === tab.id ? "active" : ""}`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              <i className={`fas ${tab.icon}`}></i> {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* 2. Tab Contents (DIPINDAH KE ATAS) */}
-        {/* Agar user memilih format dulu sebelum melihat tombol upload */}
-        <div className="tab-content-container mb-3">
-          {activeTab === "convert" && (
-            <ConvertTab
-              selectedFormat={options.format}
-              onSelectFormat={(fmt) => handleOptionChange("format", fmt)}
-            />
-          )}
-          {activeTab === "ocr" && (
-            <OcrTab options={options} setOption={handleOptionChange} />
-          )}
-          {activeTab === "merge" && <MergeTab files={files} />}
-          {activeTab === "split" && (
-            <SplitTab options={options} setOption={handleOptionChange} />
-          )}
-        </div>
-
-        {/* 3. Upload Area (DIBERIKAN PROP DISABLED) */}
-        <UploadArea onUpload={handleFileUpload} disabled={isUploadDisabled} />
-
-        <FileList files={files} onRemove={handleRemoveFile} />
-
-        <SecurityPanel options={options} setOption={handleOptionChange} />
-
-        {isProcessing && (
-          <ProgressBar progress={progress} text={`Memproses ${activeTab}...`} />
-        )}
-
-        {/* Action Buttons */}
-        <div className="action-buttons">
-          <button className="btn btn-secondary" onClick={() => setFiles([])}>
-            <i className="fas fa-trash"></i> Hapus Semua
-          </button>
-          <button
-            className="btn btn-primary"
-            onClick={handleProcess}
-            disabled={isProcessing || isUploadDisabled}
-          >
-            {isProcessing ? (
-              "Memproses..."
-            ) : (
-              <>
-                <i className="fas fa-play"></i> Mulai Proses
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
+    </Router>
   );
-};
+}
 
-export default MainCard;
+export default App;

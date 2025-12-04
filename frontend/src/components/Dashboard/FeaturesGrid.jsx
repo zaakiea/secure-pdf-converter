@@ -1,23 +1,61 @@
-import React from 'react';
+import React from "react";
+import { Link } from "react-router-dom";
 
 const FeaturesGrid = () => {
   const features = [
-    { icon: 'fa-file-pdf', title: 'Konversi Dasar', desc: 'Ubah Word, Excel, dan Gambar menjadi PDF' },
-    { icon: 'fa-eye', title: 'Sistem Cerdas (OCR)', desc: 'Ekstrak teks dari gambar pindaian' },
-    { icon: 'fa-object-group', title: 'Manipulasi PDF', desc: 'Gabungkan atau pisahkan file PDF' },
-    { icon: 'fa-lock', title: 'Keamanan', desc: 'Enkripsi AES-256 dan auto-delete' },
+    {
+      id: "convert",
+      title: "Konversi ke PDF",
+      desc: "Ubah Word, Excel, PowerPoint, atau Gambar menjadi PDF.",
+      icon: "fa-exchange-alt",
+      color: "#007bff",
+    },
+    {
+      id: "ocr",
+      title: "OCR PDF",
+      desc: "Ekstrak teks dari gambar atau PDF hasil scan menjadi teks yang bisa diedit.",
+      icon: "fa-eye",
+      color: "#28a745",
+    },
+    {
+      id: "merge",
+      title: "Gabung PDF",
+      desc: "Satukan banyak file PDF menjadi satu dokumen urut.",
+      icon: "fa-object-group",
+      color: "#6f42c1",
+    },
+    {
+      id: "split",
+      title: "Pisah PDF",
+      desc: "Ambil halaman tertentu atau pisahkan satu PDF menjadi beberapa bagian.",
+      icon: "fa-cut",
+      color: "#dc3545",
+    },
   ];
 
   return (
     <div className="features-grid">
-      {features.map((f, i) => (
-        <div key={i} className="feature-card">
-          <div className="feature-icon">
-            <i className={`fas ${f.icon}`}></i>
+      {features.map((feature) => (
+        <Link
+          to={`/tool?feature=${feature.id}`}
+          key={feature.id}
+          className="feature-card-link"
+          style={{ textDecoration: "none", color: "inherit" }}
+        >
+          <div className="feature-card">
+            <div
+              className="icon-wrapper"
+              style={{
+                backgroundColor: `${feature.color}20`,
+                color: feature.color,
+              }}
+            >
+              <i className={`fas ${feature.icon} fa-2x`}></i>
+            </div>
+            <h3>{feature.title}</h3>
+            <p>{feature.desc}</p>
           </div>
-          <h3>{f.title}</h3>
-          <p>{f.desc}</p>
-        </div>
+        </Link>
       ))}
     </div>
   );

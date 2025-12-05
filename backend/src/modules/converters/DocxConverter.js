@@ -1,112 +1,77 @@
 const BaseProcessor = require("../../core/BaseProcessor");
-const mammoth = require("mammoth");
-const puppeteer = require("puppeteer"); // Library browser virtual
 const fs = require("fs");
+const path = require("path");
+const { exec } = require("child_process");
 
 class DocxConverter extends BaseProcessor {
-  async process(inputPath, outputPath) {
+  async process(inputPath, outputPath, options) {
     console.log(
-      "[DocxConverter] Converting Word document with layout preservation..."
+      `[DocxConverter] Converting Word to PDF using Direct LibreOffice Call...`
     );
 
-    // 1. Validasi File
+    // 1. Validasi
     super.validate(inputPath);
 
-    // 2. Konversi DOCX ke HTML (Mengambil layout, tabel, gambar)
-    // convertToHtml jauh lebih baik daripada extractRawText
-    const result = await mammoth.convertToHtml({ path: inputPath });
-    const htmlContent = result.value;
+    // 2. Tentukan Folder Output (LibreOffice butuh folder, bukan nama file target)
+    // Kita gunakan folder yang sama dengan outputPath ('output/')
+    const outputDir = path.dirname(outputPath);
 
-    if (!htmlContent) {
-      throw new Error("Gagal membaca konten dokumen Word.");
+    // 3. Tentukan Path LibreOffice Secara Manual
+    // Cek path default Windows. Jika Anda install di D:, sesuaikan path ini.
+    const librePath = "C:\\Program Files\\LibreOffice\\program\\soffice.exe";
+
+    // Cek apakah file exe benar-benar ada
+    if (!fs.existsSync(librePath)) {
+      throw new Error(
+        `LibreOffice tidak ditemukan di: ${librePath}. Pastikan sudah diinstall.`
+      );
     }
 
-    // 3. Styling CSS: Membuat tampilan HTML mirip dokumen cetak A4
-    const finalHtml = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <style>
-                    body {
-                        font-family: 'Times New Roman', serif; /* Font standar dokumen resmi */
-                        font-size: 12pt;
-                        line-height: 1.5;
-                        color: #000;
-                        background: #fff;
-                        padding: 0;
-                        margin: 0;
-                    }
-                    /* Layout Dokumen */
-                    h1, h2, h3, h4 { font-family: Arial, sans-serif; margin-top: 1em; margin-bottom: 0.5em; font-weight: bold; }
-                    p { margin-bottom: 10px; text-align: justify; }
-                    
-                    /* Styling TABEL agar garisnya muncul */
-                    table { 
-                        width: 100%; 
-                        border-collapse: collapse; 
-                        margin: 20px 0; 
-                        page-break-inside: avoid; /* Jangan potong tabel di tengah halaman */
-                    }
-                    th, td { 
-                        border: 1px solid #000; 
-                        padding: 8px; 
-                        text-align: left; 
-                        vertical-align: top; 
-                    }
-                    
-                    /* Styling GAMBAR agar rapi dan tidak lewat margin */
-                    img { 
-                        max-width: 100%; 
-                        height: auto; 
-                        display: block; 
-                        margin: 15px auto; 
-                    }
-                    
-                    /* Styling List (Bullet Points) */
-                    ul, ol { margin-left: 20px; padding-left: 20px; }
-                </style>
-            </head>
-            <body>
-                ${htmlContent}
-            </body>
-            </html>
-        `;
+    // 4. Susun Perintah Terminal
+    // Perintah: "path/to/soffice" --headless --convert-to pdf --outdir "folder/output" "file/input.docx"
+    const command = `"${librePath}" --headless --convert-to pdf --outdir "${outputDir}" "${inputPath}"`;
 
-    // 4. Proses Rendering PDF menggunakan Puppeteer
-    // Kita menyalakan browser "headless" (di balik layar)
-    const browser = await puppeteer.launch({
-      headless: "new",
-      args: ["--no-sandbox"], // Opsi keamanan standar server
+    return new Promise((resolve, reject) => {
+      // Jalankan perintah terminal
+      exec(command, (error, stdout, stderr) => {
+        if (error) {
+          console.error("[DocxConverter] Exec Error:", error);
+          return reject(
+            new Error("Gagal menjalankan LibreOffice. Cek log server.")
+          );
+        }
+
+        // LibreOffice akan menghasilkan file dengan nama ASLI tapi ekstensi .pdf
+        // Contoh: input "laporan.docx" -> output "laporan.pdf"
+        const originalName = path.basename(inputPath, path.extname(inputPath));
+        const libreOutput = path.join(outputDir, `${originalName}.pdf`);
+
+        // 5. Rename ke nama target yang diminta sistem (result-TIMESTAMP.pdf)
+        if (fs.existsSync(libreOutput)) {
+          // Hapus file target lama jika ada (overwrite)
+          if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+
+          try {
+            fs.renameSync(libreOutput, outputPath);
+            console.log(
+              `[DocxConverter] Sukses! File tersimpan di: ${outputPath}`
+            );
+            resolve(outputPath);
+          } catch (renameErr) {
+            // Fallback: Jika rename gagal (misal beda drive), copy lalu hapus
+            fs.copyFileSync(libreOutput, outputPath);
+            fs.unlinkSync(libreOutput);
+            resolve(outputPath);
+          }
+        } else {
+          reject(
+            new Error(
+              "File PDF tidak terbentuk. Mungkin dokumen korup atau dipassword."
+            )
+          );
+        }
+      });
     });
-    const page = await browser.newPage();
-
-    // Masukkan HTML ke halaman browser
-    await page.setContent(finalHtml, {
-      waitUntil: "networkidle0", // Tunggu sampai semua gambar selesai dimuat
-    });
-
-    // Cetak ke PDF (Simulasi Printer)
-    const pdfBuffer = await page.pdf({
-      format: "A4",
-      printBackground: true, // Cetak background (penting untuk gambar)
-      margin: {
-        top: "2.54cm", // Margin atas standar Word (1 inci)
-        bottom: "2.54cm", // Margin bawah
-        left: "2.54cm", // Margin kiri
-        right: "2.54cm", // Margin kanan
-      },
-    });
-
-    await browser.close();
-
-    // 5. Simpan Hasil PDF
-    fs.writeFileSync(outputPath, pdfBuffer);
-
-    console.log(
-      "[DocxConverter] Success converting Docx to PDF (Layout Preserved)."
-    );
-    return outputPath;
   }
 }
 

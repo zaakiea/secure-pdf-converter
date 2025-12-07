@@ -7,24 +7,33 @@ const OcrTab = ({ options, setOption }) => {
         <i className="fas fa-eye"></i> Optical Character Recognition (OCR)
       </h4>
       <p className="text-muted small">
-        Ekstrak teks dari gambar agar bisa dicopy-paste.
+        Sistem Cerdas akan memindai gambar dan mengubah tulisan di dalamnya
+        menjadi teks PDF yang bisa diedit/disalin.
       </p>
 
-      <div className="mb-2">
-        <label className="form-label">Bahasa Dokumen:</label>
+      <div className="mb-3">
+        <label className="form-label fw-bold">Bahasa Dokumen:</label>
         <select
           className="form-select"
           value={options.ocrLanguage}
           onChange={(e) => setOption("ocrLanguage", e.target.value)}
         >
-          <option value="eng">Inggris (English)</option>
-          {/* Tambahkan opsi lain jika backend sudah support */}
+          <option value="ind">Bahasa Indonesia</option>
+          <option value="eng">Bahasa Inggris (English)</option>
+          <option value="mix">Otomatis (Indonesia & Inggris)</option>
         </select>
+        <div className="form-text text-info">
+          <i className="fas fa-lightbulb"></i> Pilih "Otomatis" jika dokumen
+          mengandung dua bahasa sekaligus.
+        </div>
       </div>
-      <div className="alert alert-info py-2">
+
+      <div className="alert alert-secondary py-2">
         <small>
-          <i className="fas fa-info-circle"></i> Proses OCR mungkin memakan
-          waktu lebih lama tergantung kualitas gambar.
+          <i className="fas fa-info-circle"></i> <strong>Catatan:</strong>{" "}
+          Proses OCR membutuhkan waktu lebih lama (5-10 detik) dibandingkan
+          konversi biasa karena menggunakan kecerdasan buatan untuk membaca
+          piksel gambar.
         </small>
       </div>
     </div>

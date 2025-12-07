@@ -10,12 +10,13 @@ const fs = require("fs");
 
 class MainController {
   static async handleRequest(req, res) {
-    let inputData; // Deklarasi di luar try agar bisa diakses di finally/cleanup
+    let inputData;
     let outputPath;
 
     try {
+      // Ambil metadata operasi dan password dari body
       const { operation, password } = req.body;
-      // Ambil opsi tambahan (seperti range halaman untuk split)
+      // 'options' berisi data tambahan seperti ocrLanguage atau splitRange
       const options = req.body;
 
       const files = req.files || (req.file ? [req.file] : []);
@@ -23,9 +24,10 @@ class MainController {
       if (files.length === 0) throw new Error("No files uploaded.");
 
       let processor;
+      // Pastikan folder output ada (bisa ditambahkan mkdirSync jika perlu)
       outputPath = path.join("output", `result-${Date.now()}.pdf`);
 
-      // Factory Pattern
+      // Factory Pattern: Pilih Processor berdasarkan 'operation'
       switch (operation) {
         case "ocr":
           processor = new OcrConverter();
@@ -56,25 +58,26 @@ class MainController {
           throw new Error("Invalid operation: " + operation);
       }
 
-      // PERBAIKAN 1: Kirim 'options' sebagai parameter ke-3 agar SplitManipulator bisa baca range
+      // Jalankan proses konversi/manipulasi
+      // Options diteruskan agar OCRConverter bisa baca 'ocrLanguage'
       await processor.process(inputData, outputPath, options);
 
-      // Security Injection
+      // Security Injection (Enkripsi jika password diisi)
       if (password) {
         const security = new SecurityHandler(password);
         await security.applySecurity(outputPath);
       }
 
-      // Kirim file ke user
+      // Kirim file hasil ke user
       res.download(outputPath, (err) => {
         if (err) console.error("Download Error:", err);
 
-        // PERBAIKAN 2: Auto Cleanup (Hapus file sampah)
+        // Auto Cleanup: Hapus file sementara setelah didownload user
         MainController.cleanup(inputData, outputPath);
       });
     } catch (error) {
       console.error(error);
-      // Cleanup jika error terjadi sebelum download
+      // Cleanup jika error terjadi sebelum download selesai
       if (inputData || outputPath)
         MainController.cleanup(inputData, outputPath);
 
@@ -82,7 +85,7 @@ class MainController {
     }
   }
 
-  // Helper untuk hapus file
+  // Helper untuk hapus file sampah (input user & output sementara)
   static cleanup(inputData, outputPath) {
     try {
       // Hapus Input (Bisa berupa String path atau Array path)

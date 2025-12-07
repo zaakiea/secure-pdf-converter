@@ -5,8 +5,9 @@ const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
 const fs = require("fs");
 
 class OcrConverter extends BaseProcessor {
-  async process(inputPath, outputPath, options) {
+  async process(inputPath, outputPath, options = {}) {
     console.log("[OCR] Memulai Sistem Cerdas Ekstraksi Teks...");
+    // Validasi input file
     super.validate(inputPath);
 
     let worker;
@@ -27,11 +28,20 @@ class OcrConverter extends BaseProcessor {
         .threshold(128) // Binarisasi (Ubah jadi Hitam & Putih mutlak)
         .toBuffer();
 
-      // 2. Inisialisasi Worker Tesseract (AI OCR)
-      // Kita load bahasa Inggris (eng) dan Indonesia (ind)
-      worker = await createWorker("eng+ind");
+      // 2. Tentukan Bahasa berdasarkan input User (dari Frontend)
+      // Default: 'eng+ind' jika user tidak memilih
+      const langMap = {
+        ind: "ind",
+        eng: "eng",
+        mix: "eng+ind",
+      };
+      const selectedLang = langMap[options.ocrLanguage] || "eng+ind";
+      console.log(`[OCR] Bahasa yang dipilih: ${selectedLang}`);
 
-      // 3. Ekstraksi Teks dari gambar yang sudah bersih
+      // 3. Inisialisasi Worker Tesseract (AI OCR)
+      worker = await createWorker(selectedLang);
+
+      // 4. Ekstraksi Teks dari gambar yang sudah bersih
       console.log("[OCR] Sedang memindai teks...");
       const {
         data: { text },
@@ -45,18 +55,17 @@ class OcrConverter extends BaseProcessor {
         );
       }
 
-      // 4. Generate PDF Baru
+      // 5. Generate PDF Baru dari Teks
       const pdfDoc = await PDFDocument.create();
       const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
       // Logika Pagination Sederhana (Text Wrapping)
-      // Karena PDF tidak otomatis pindah halaman, kita hitung manual
       const fontSize = 11;
       const margin = 50;
       const lineHeight = 14;
       const pageHeight = 842; // Ukuran A4
 
-      // Bersihkan teks dari karakter aneh
+      // Bersihkan teks dari karakter yang tidak didukung PDF standard
       const cleanText = text.replace(/[^\x20-\x7E\n\r\t]/g, "");
       const lines = cleanText.split("\n");
 
@@ -70,9 +79,7 @@ class OcrConverter extends BaseProcessor {
           y = pageHeight - margin;
         }
 
-        // Tulis baris (sederhana)
-        // Catatan: Untuk hasil sempurna butuh library text-wrapper kompleks,
-        // tapi ini cukup untuk Tugas Besar.
+        // Tulis baris teks
         try {
           page.drawText(line, {
             x: margin,
@@ -84,7 +91,7 @@ class OcrConverter extends BaseProcessor {
           });
           y -= lineHeight;
         } catch (e) {
-          // Abaikan karakter yang tidak didukung font standar
+          // Abaikan error font karakter khusus
         }
       }
 

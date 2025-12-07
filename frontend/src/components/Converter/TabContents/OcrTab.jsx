@@ -15,7 +15,7 @@ const OcrTab = ({ options, setOption }) => {
         <label className="form-label fw-bold">Bahasa Dokumen:</label>
         <select
           className="form-select"
-          value={options.ocrLanguage}
+          value={options.ocrLanguage || "eng"} // Default ke English jika kosong
           onChange={(e) => setOption("ocrLanguage", e.target.value)}
         >
           <option value="ind">Bahasa Indonesia</option>
@@ -33,7 +33,7 @@ const OcrTab = ({ options, setOption }) => {
           <i className="fas fa-info-circle"></i> <strong>Catatan:</strong>{" "}
           Proses OCR membutuhkan waktu lebih lama (5-10 detik) dibandingkan
           konversi biasa karena menggunakan kecerdasan buatan untuk membaca
-          piksel gambar.
+          piksel gambar dan melakukan pembersihan noise.
         </small>
       </div>
     </div>

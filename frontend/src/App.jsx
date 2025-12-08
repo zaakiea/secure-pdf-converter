@@ -1,38 +1,35 @@
-import React, { useEffect } from 'react';
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import "./App.css";
+import "@fortawesome/fontawesome-free/css/all.min.css";
 
-// 1. Import CSS
-// Pastikan Anda sudah menyalin semua CSS ke dalam file src/App.css
-import './App.css';
-import '@fortawesome/fontawesome-free/css/all.min.css';
+// Layout
+import Header from "./components/Layout/Header";
+import Footer from "./components/Layout/Footer";
 
-// 2. Import Komponen dari folder masing-masing
-import Header from './components/Layout/Header';
-import Footer from './components/Layout/Footer';
-import FeaturesGrid from './components/Dashboard/FeaturesGrid';
-import SystemInfo from './components/Dashboard/SystemInfo';
-// Pastikan nama file Anda MainCard.jsx, jika MainConverter.jsx sesuaikan import ini
-import MainCard from './components/Converter/MainCard'; 
+// Pages
+import HomePage from "./pages/HomePage";
+import UploadPage from "./pages/UploadPage";
 
 function App() {
   return (
-    <div className="app-container">
-      {/* Header dari components/Layout/Header.jsx */}
-      <Header />
-      
-      <main className="container">
-        {/* FeaturesGrid dari components/Dashboard/FeaturesGrid.jsx */}
-        <FeaturesGrid />
-        
-        {/* MainCard adalah komponen utama konverter */}
-        <MainCard />
-        
-        {/* SystemInfo dari components/Dashboard/SystemInfo.jsx */}
-        <SystemInfo />
-      </main>
-      
-      {/* Footer dari components/Layout/Footer.jsx */}
-      <Footer />
-    </div>
+    <Router>
+      <div className="app-container">
+        <Header />
+
+        <main className="container">
+          <Routes>
+            {/* Route Halaman Utama */}
+            <Route path="/" element={<HomePage />} />
+
+            {/* Route Halaman Upload Dinamis (:feature bisa jadi convert, ocr, dll) */}
+            <Route path="/upload/:feature" element={<UploadPage />} />
+          </Routes>
+        </main>
+
+        <Footer />
+      </div>
+    </Router>
   );
 }
 

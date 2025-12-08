@@ -1,20 +1,26 @@
-import React from 'react';
+import React from "react";
 
 const MergeTab = ({ files }) => {
   return (
-    <div className="tab-content active">
-      <h3 className="mb-2">Gabungkan PDF</h3>
-      <p>File akan digabungkan sesuai urutan di bawah ini.</p>
-      
-      {files.length === 0 ? (
-        <p className="text-center text-muted">Belum ada file yang dipilih untuk digabungkan.</p>
-      ) : (
-        <div className="file-list-preview">
-          {/* Disini bisa ditambahkan fitur drag-drop reordering jika sempat */}
-          <p>Urutan File:</p>
-          <ol style={{ marginLeft: '1.5rem' }}>
-            {files.map((f, i) => <li key={i}>{f.name}</li>)}
-          </ol>
+    <div className="tab-content active bg-white p-3 border rounded">
+      <h4>
+        <i className="fas fa-object-group"></i> Gabung PDF (Merge)
+      </h4>
+      <p>
+        Urutan file di atas menentukan urutan halaman dalam PDF hasil gabungan.
+      </p>
+
+      {files.length < 2 && (
+        <div className="alert alert-warning">
+          <i className="fas fa-exclamation-triangle"></i> Minimal butuh 2 file
+          PDF untuk melakukan penggabungan.
+        </div>
+      )}
+
+      {files.length >= 2 && (
+        <div className="alert alert-success">
+          <i className="fas fa-check-circle"></i> {files.length} file siap
+          digabungkan.
         </div>
       )}
     </div>

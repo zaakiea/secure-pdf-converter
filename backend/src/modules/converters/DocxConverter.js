@@ -1,47 +1,77 @@
 const BaseProcessor = require("../../core/BaseProcessor");
-const mammoth = require("mammoth");
-const { PDFDocument, rgb } = require("pdf-lib");
 const fs = require("fs");
+const path = require("path");
+const { exec } = require("child_process");
 
 class DocxConverter extends BaseProcessor {
-  async process(inputPath, outputPath) {
-    console.log("[DocxConverter] Converting Word document...");
+  async process(inputPath, outputPath, options) {
+    console.log(
+      `[DocxConverter] Converting Word to PDF using Direct LibreOffice Call...`
+    );
 
-    // 1. Validasi (Inheritance dari Parent)
+    // 1. Validasi
     super.validate(inputPath);
 
-    // 2. Baca file Word dan ekstrak teks mentahnya (Raw Text)
-    // (Catatan: Konversi format full layout sangat sulit di Node.js murni,
-    // jadi kita ambil teksnya untuk dijadikan PDF sebagai demo PBO)
-    const result = await mammoth.extractRawText({ path: inputPath });
-    const text = result.value; // Teks asli dari Word
+    // 2. Tentukan Folder Output (LibreOffice butuh folder, bukan nama file target)
+    // Kita gunakan folder yang sama dengan outputPath ('output/')
+    const outputDir = path.dirname(outputPath);
 
-    if (!text) {
-      throw new Error("Gagal membaca teks dari file Word.");
+    // 3. Tentukan Path LibreOffice Secara Manual
+    // Cek path default Windows. Jika Anda install di D:, sesuaikan path ini.
+    const librePath = "C:\\Program Files\\LibreOffice\\program\\soffice.exe";
+
+    // Cek apakah file exe benar-benar ada
+    if (!fs.existsSync(librePath)) {
+      throw new Error(
+        `LibreOffice tidak ditemukan di: ${librePath}. Pastikan sudah diinstall.`
+      );
     }
 
-    // 3. Buat PDF baru berisi teks tersebut
-    const pdfDoc = await PDFDocument.create();
-    let page = pdfDoc.addPage();
-    const { width, height } = page.getSize();
-    const fontSize = 12;
+    // 4. Susun Perintah Terminal
+    // Perintah: "path/to/soffice" --headless --convert-to pdf --outdir "folder/output" "file/input.docx"
+    const command = `"${librePath}" --headless --convert-to pdf --outdir "${outputDir}" "${inputPath}"`;
 
-    // Tulis teks ke PDF (Simple Wrap)
-    page.drawText(text.substring(0, 2000), {
-      // Batasi karakter demo
-      x: 50,
-      y: height - 50,
-      size: fontSize,
-      color: rgb(0, 0, 0),
-      maxWidth: width - 100,
-      lineHeight: 14,
+    return new Promise((resolve, reject) => {
+      // Jalankan perintah terminal
+      exec(command, (error, stdout, stderr) => {
+        if (error) {
+          console.error("[DocxConverter] Exec Error:", error);
+          return reject(
+            new Error("Gagal menjalankan LibreOffice. Cek log server.")
+          );
+        }
+
+        // LibreOffice akan menghasilkan file dengan nama ASLI tapi ekstensi .pdf
+        // Contoh: input "laporan.docx" -> output "laporan.pdf"
+        const originalName = path.basename(inputPath, path.extname(inputPath));
+        const libreOutput = path.join(outputDir, `${originalName}.pdf`);
+
+        // 5. Rename ke nama target yang diminta sistem (result-TIMESTAMP.pdf)
+        if (fs.existsSync(libreOutput)) {
+          // Hapus file target lama jika ada (overwrite)
+          if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+
+          try {
+            fs.renameSync(libreOutput, outputPath);
+            console.log(
+              `[DocxConverter] Sukses! File tersimpan di: ${outputPath}`
+            );
+            resolve(outputPath);
+          } catch (renameErr) {
+            // Fallback: Jika rename gagal (misal beda drive), copy lalu hapus
+            fs.copyFileSync(libreOutput, outputPath);
+            fs.unlinkSync(libreOutput);
+            resolve(outputPath);
+          }
+        } else {
+          reject(
+            new Error(
+              "File PDF tidak terbentuk. Mungkin dokumen korup atau dipassword."
+            )
+          );
+        }
+      });
     });
-
-    const pdfBytes = await pdfDoc.save();
-    fs.writeFileSync(outputPath, pdfBytes);
-
-    console.log("[DocxConverter] Success converting Docx to PDF.");
-    return outputPath;
   }
 }
 
